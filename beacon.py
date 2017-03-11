@@ -19,19 +19,23 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/launch", filem
 
 def global_except_hook(exctype, value, traceback):
 	logging.error(value);
-	sys.__excepthook__(exctype, value, traceback)
+	if str(value).find("Adafruit") != -1:
+		reconnect()
+		pass
+	else:
+		sys.__excepthook__(exctype, value, traceback)
 
 sys.excepthook = global_except_hook
 
 def connected(client):
-	logging.info("subscribed")
+	logging.info("connected")
+	global failConnectCount
+	failConnectCount = 0
 	client.subscribe('cameraevent') # or change to whatever name you used	
 
 def message(client, feed_id, payload):
 	logging.info('Feed {0} received new value: {1}'.format(feed_id, payload))
 	global launched
-	global failConnectCount
-	failConnectCount = 0
 	if launched == False:
 		launched = True
 	else:
@@ -59,12 +63,9 @@ def connect():
 def reconnect():
 	global failConnectCount
 	failConnectCount += 1
-	if failConnectCount > 4:
-		sys.exit(1);
-	else:
-		logging.info('reconnecting - failcount=' + str(failConnectCount))
-		sleep(1)
-		connect()
+	logging.info('pending reconnect - failcount=' + str(failConnectCount))
+	sleep(10)
+	connect()
 	
 led.on()
 sleep(1)
@@ -74,6 +75,7 @@ client = MQTTClient('Jdepascale', 'ee0b91b182134253987e863af9be67ac')
 
 # Setup the callback functions defined above.
 client.on_connect    = connected
+client.on_disconnect = disconnected
 client.on_message    = message
 
 connect()
