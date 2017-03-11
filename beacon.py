@@ -11,7 +11,6 @@ import sys
 import string
  
 led = LED(17)
-launched = False
 failConnectCount = 0
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/launch", filemode="a+",
                         format="%(asctime)-15s %(levelname)-8s %(message)s")
@@ -34,11 +33,12 @@ def connected(client):
 	client.subscribe('cameraevent') # or change to whatever name you used	
 
 def message(client, feed_id, payload):
-	logging.info('Feed {0} received new value: {1}'.format(feed_id, payload))
-	global launched
-	if launched == False:
-		launched = True
-	else:
+	msgStr = 'Feed {0} received new value: {1}'.format(feed_id, payload)
+	log_data = ""
+	with open('/home/pi/share/launch', 'r') as myfile:
+		log_data=myfile.read().replace('\n', '')
+	if log_data.find(msgStr) == -1:
+		logging.info(msgStr)
 		mixer.init()
 		mixer.music.load('/home/pi/share/notification.mp3')
 		mixer.music.set_volume(1)
