@@ -16,12 +16,8 @@ logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/launch", filem
 								
 
 def global_except_hook(exctype, value, traceback):
-		logging.error(value);
-		if str(value).find("Adafruit") != -1:
-			connectState = ConnectState.PendingReconnect
-			pass
-		else:
-			sys.__excepthook__(exctype, value, traceback)
+	logging.info(value);
+	sys.__excepthook__(exctype, value, traceback)
 				
 sys.excepthook = global_except_hook
 
@@ -57,7 +53,11 @@ class Beacon(object):
 				self.connect()
 			elif self.connectState == ConnectState.PendingReconnect:
 				self.reconnect()
-			self.client.loop()
+			try:
+				self.client.loop()
+			except RuntimeError:
+				self.reconnect()
+			
 	
 	def message(self, client, feed_id, payload):
 		msgStr = 'Feed {0} received new value: {1}'.format(feed_id, payload)
