@@ -12,7 +12,7 @@ import string
 import json
 
 
-logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/launch", filemode="a+",
+logging.basicConfig(level=logging.DEBUG, filename="./beacon.log", filemode="a+",
 								format="%(asctime)-15s %(levelname)-8s %(message)s")
 								
 
@@ -40,9 +40,9 @@ class Beacon(object):
 	def __init__(self):
 		logging.info("Beacon service initialized")
 		
-		with open('/boot/beacon.json') as data_file:    
+		with open('/boot/beacon/config.json') as data_file:    
 			self.configData = json.load(data_file)
-		
+		#need to account for no json data loaded
 		self.led.on()
 		sleep(1)
 		self.led.off()
@@ -68,18 +68,30 @@ class Beacon(object):
 	def message(self, client, feed_id, payload):
 		msgStr = 'Feed {0} received new value: {1}'.format(feed_id, payload)
 		log_data = ""
-		with open('/home/pi/share/launch', 'r') as myfile:
+		with open('./beacon.log', 'r') as myfile:
 			log_data=myfile.read().replace('\n', '')
 		if log_data.find(msgStr) == -1:
 			logging.info(msgStr)
-			mixer.init()
-			mixer.music.load(self.configData["sounds"]["notification"])
-			mixer.music.set_volume(1)
-			mixer.music.play()
+			messageData = None
+			try:
+				messageData = json.loads(payload)
+			except:
+				pass
+			sound = None
+			if self.configData["sounds"] is not None:
+				sound = self.configData["sounds"]["default"]
+			if messageData is not None and messageData["sound"] is not None:
+				sound = self.configData["sounds"][messageData["sound"]]
+			if sound is not None:
+				try:
+					mixer.init()
+					mixer.music.load('/boot/beacon/sounds/' + sound)
+					mixer.music.play()
+				except:
+					logging.exception("Error playing specified notification sound " + sound)
 			self.led.on()
 			sleep(5)
 			self.led.off()
-			mixer.quit()
 
 	def connected(self, client):
 		logging.info("Connected to Adafruit IO")
@@ -97,8 +109,8 @@ class Beacon(object):
 		self.connectState = ConnectState.Connecting
 		try:
 			self.client.connect()
-		except AdafruitIOError as e:
-			logging.error(e)
+		except e:
+			logging.exception("Exception from Adafruit client connect")
 			self.reconnect()
 
 	def reconnect(self):
