@@ -9,6 +9,7 @@ import pygame
 import logging
 import sys
 import string
+import json
 
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/launch", filemode="a+",
@@ -33,16 +34,20 @@ class Beacon(object):
 	led = LED(17)	
 	connectState = ConnectState.Disconnected
 	failConnectCount = 0
+	configData = None
 	client = None
 	
 	def __init__(self):
 		logging.info("Beacon service initialized")
 		
+		with open('/boot/beacon.json') as data_file:    
+			self.configData = json.load(data_file)
+		
 		self.led.on()
 		sleep(1)
 		self.led.off()
 		
-		self.client = MQTTClient('Jdepascale', 'ee0b91b182134253987e863af9be67ac')
+		self.client = MQTTClient(self.configData["credentials"]["username"], self.configData["credentials"]["key"])
 
 		self.client.on_connect    = self.connected
 		self.client.on_disconnect = self.disconnected
@@ -56,6 +61,7 @@ class Beacon(object):
 			try:
 				self.client.loop()
 			except RuntimeError:
+				logging.exception("runtime error caught from mqtt client loop")
 				self.reconnect()
 			
 	
@@ -67,7 +73,7 @@ class Beacon(object):
 		if log_data.find(msgStr) == -1:
 			logging.info(msgStr)
 			mixer.init()
-			mixer.music.load('/home/pi/share/notification.mp3')
+			mixer.music.load(self.configData["sounds"]["notification"])
 			mixer.music.set_volume(1)
 			mixer.music.play()
 			self.led.on()
@@ -76,10 +82,10 @@ class Beacon(object):
 			mixer.quit()
 
 	def connected(self, client):
-		logging.info("connected")
+		logging.info("Connected to Adafruit IO")
 		self.connectState = ConnectState.Connected
 		self.failConnectCount = 0
-		self.client.subscribe('cameraevent') # or change to whatever name you used	
+		self.client.subscribe(self.configData["feeds"]["receive"]) # or change to whatever name you used	
 				
 	def disconnected(self, client):
 		logging.info('Disconnected from AdafruitIO')
@@ -87,7 +93,7 @@ class Beacon(object):
 		self.reconnect();
 	
 	def connect(self):
-		logging.info("connect")
+		logging.info("init connect to Adafruit IO")
 		self.connectState = ConnectState.Connecting
 		try:
 			self.client.connect()
@@ -97,7 +103,7 @@ class Beacon(object):
 
 	def reconnect(self):
 		self.failConnectCount += 1
-		logging.info('pending reconnect - failcount=' + str(self.failConnectCount))
+		logging.info('pending Adafruit IO reconnect - failcount=' + str(self.failConnectCount))
 		self.connectState = ConnectState.Connecting
 		sleep(10)
 		self.connect()
