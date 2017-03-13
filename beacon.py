@@ -11,8 +11,7 @@ import sys
 import string
 import json
 
-
-logging.basicConfig(level=logging.DEBUG, filename="./beacon.log", filemode="a+",
+logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/beacon.log", filemode="a+",
 								format="%(asctime)-15s %(levelname)-8s %(message)s")
 								
 
@@ -36,16 +35,23 @@ class Beacon(object):
 	failConnectCount = 0
 	configData = None
 	client = None
+	soundDir = '/boot/beacon/sounds/'
 	
 	def __init__(self):
 		logging.info("Beacon service initialized")
+		self.led.on()
+		sleep(1)
+		self.led.off()
 		
 		with open('/boot/beacon/config.json') as data_file:    
 			self.configData = json.load(data_file)
 		#need to account for no json data loaded
-		self.led.on()
-		sleep(1)
-		self.led.off()
+		
+		if self.configData.get("directories"):
+			dirObj = self.configData["directories"]
+			if dirObj.get("sound"):
+				soundDir = dirObj["sound"]
+				
 		
 		self.client = MQTTClient(self.configData["credentials"]["username"], self.configData["credentials"]["key"])
 
@@ -68,7 +74,7 @@ class Beacon(object):
 	def message(self, client, feed_id, payload):
 		msgStr = 'Feed {0} received new value: {1}'.format(feed_id, payload)
 		log_data = ""
-		with open('./beacon.log', 'r') as myfile:
+		with open('/home/pi/share/beacon.log', 'r') as myfile:
 			log_data=myfile.read().replace('\n', '')
 		if log_data.find(msgStr) == -1:
 			logging.info(msgStr)
@@ -78,20 +84,24 @@ class Beacon(object):
 			except:
 				pass
 			sound = None
-			if self.configData["sounds"] is not None:
+			if self.configData.get("sounds"):
 				sound = self.configData["sounds"]["default"]
-			if messageData is not None and messageData["sound"] is not None:
+			if messageData is not None and messageData.get("sound"):
 				sound = self.configData["sounds"][messageData["sound"]]
 			if sound is not None:
-				try:
-					mixer.init()
-					mixer.music.load('/boot/beacon/sounds/' + sound)
-					mixer.music.play()
-				except:
-					logging.exception("Error playing specified notification sound " + sound)
-			self.led.on()
-			sleep(5)
-			self.led.off()
+				mixer.init()
+				mixer.music.set_volume(1)
+				mixer.music.load(self.soundDir + sound)
+				mixer.music.play()
+			blinkCount = int(messageData.get("blinkCount") or 1)
+			blinkRate = float(messageData.get("blinkRate") or 5)
+			print blinkCount
+			print blinkRate
+			for i in range(0,blinkCount):
+				self.led.on()
+				sleep(blinkRate)
+				self.led.off()
+				sleep(blinkRate)
 
 	def connected(self, client):
 		logging.info("Connected to Adafruit IO")
@@ -109,7 +119,7 @@ class Beacon(object):
 		self.connectState = ConnectState.Connecting
 		try:
 			self.client.connect()
-		except e:
+		except Error as e:
 			logging.exception("Exception from Adafruit client connect")
 			self.reconnect()
 
