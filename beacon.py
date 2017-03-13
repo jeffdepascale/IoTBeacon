@@ -90,13 +90,11 @@ class Beacon(object):
 				sound = self.configData["sounds"][messageData["sound"]]
 			if sound is not None:
 				mixer.init()
-				mixer.music.set_volume(1)
+				mixer.music.set_volume(float(messageData.get("volume") or 1))
 				mixer.music.load(self.soundDir + sound)
 				mixer.music.play()
 			blinkCount = int(messageData.get("blinkCount") or 1)
 			blinkRate = float(messageData.get("blinkRate") or 5)
-			print blinkCount
-			print blinkRate
 			for i in range(0,blinkCount):
 				self.led.on()
 				sleep(blinkRate)
@@ -119,7 +117,7 @@ class Beacon(object):
 		self.connectState = ConnectState.Connecting
 		try:
 			self.client.connect()
-		except Error as e:
+		except Exception as e:
 			logging.exception("Exception from Adafruit client connect")
 			self.reconnect()
 
