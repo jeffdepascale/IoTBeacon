@@ -3,7 +3,7 @@
 from Adafruit_IO import MQTTClient
 from Adafruit_IO.errors import AdafruitIOError
 from time import sleep
-from gpiozero import LED
+import gpiozero
 from pygame import mixer
 import pygame
 import logging
@@ -30,18 +30,19 @@ class ConnectState:
 	
 class Beacon(object):
 
-	led = LED(17)	
 	connectState = ConnectState.Disconnected
 	failConnectCount = 0
 	configData = None
 	client = None
 	soundDir = '/boot/beacon/sounds/'
+	greenLED = None
+	redLED = None
+	blueLED = None
 	
 	def __init__(self):
 		logging.info("Beacon service initialized")
-		self.led.on()
-		sleep(1)
-		self.led.off()
+		
+		self.ledDisplay(0, 1, 0, 1, 1)
 		
 		with open('/boot/beacon/config.json') as data_file:    
 			self.configData = json.load(data_file)
@@ -84,22 +85,57 @@ class Beacon(object):
 			except:
 				pass
 			sound = None
+			volume = 1				
+			redVal = 0
+			greenVal = 1
+			blueVal = 0
+			blinkCount = 1
+			blinkRate = 5
 			if self.configData.get("sounds"):
 				sound = self.configData["sounds"]["default"]
-			if messageData is not None and messageData.get("sound"):
-				sound = self.configData["sounds"][messageData["sound"]]
+			if messageData is not None:
+				if messageData.get("sound"):
+					sound = self.configData["sounds"][messageData["sound"]]
+				if messageData.get("volume") is not None:
+					volume = float(messageData.get("volume"))
+				if messageData.get("blinkCount") is not None:
+					blinkCount = int(messageData.get("blinkCount"))
+				if messageData.get("blinkRate") is not None:
+					blinkRate = float(messageData.get("blinkRate"))		
+				if messageData.get("color") is not None:
+					try:
+						colorArr = str(messageData.get("color")).split("/")
+						redVal = int(colorArr[0])
+						greenVal = int(colorArr[1])
+						blueVal = int(colorArr[2])
+					except:
+						pass
 			if sound is not None:
-				mixer.init()
-				mixer.music.set_volume(float(messageData.get("volume") or 1))
+				mixer.init()			
+				mixer.music.set_volume(volume)
 				mixer.music.load(self.soundDir + sound)
 				mixer.music.play()
-			blinkCount = int(messageData.get("blinkCount") or 1)
-			blinkRate = float(messageData.get("blinkRate") or 5)
-			for i in range(0,blinkCount):
-				self.led.on()
-				sleep(blinkRate)
-				self.led.off()
-				sleep(blinkRate)
+			self.ledDisplay(redVal, greenVal, blueVal, blinkCount, blinkRate)
+	
+	def initializeLEDs(self):
+		self.greenLED = gpiozero.PWMOutputDevice(17, False, 0)
+		self.redLED = gpiozero.PWMOutputDevice(18, False, 0)
+		self.blueLED = gpiozero.PWMOutputDevice(27, False, 0)
+	
+	def closeLEDs(self):
+		self.greenLED.close()
+		self.blueLED.close()
+		self.redLED.close()		
+				
+	def ledDisplay(self, r, g, b, blinkCount, blinkRate):
+		for i in range(0,blinkCount):
+			self.initializeLEDs()
+			self.redLED.value = r
+			self.blueLED.value = b
+			self.greenLED.value = g
+			sleep(blinkRate)
+			self.closeLEDs()
+			sleep(blinkRate)
 
 	def connected(self, client):
 		logging.info("Connected to Adafruit IO")
