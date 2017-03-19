@@ -2,8 +2,10 @@
 
 from Adafruit_IO import MQTTClient
 from Adafruit_IO.errors import AdafruitIOError
+import time
 from time import sleep
 import gpiozero
+from gpiozero import Button
 from pygame import mixer
 import pygame
 import logging
@@ -23,10 +25,7 @@ sys.excepthook = global_except_hook
 
 
 class ConnectState:
-    Disconnected, Connecting, Connected, PendingReconnect = range(4)
-
-	
-	
+    Disconnected, Connecting, Connected, PendingReconnect = range(4)	
 	
 class Beacon(object):
 
@@ -38,11 +37,17 @@ class Beacon(object):
 	greenLED = None
 	redLED = None
 	blueLED = None
+	button = None
+	buttonHoldTime = None
 	
 	def __init__(self):
 		logging.info("Beacon service initialized")
 		
 		self.ledDisplay(0, 1, 0, 1, 1)
+		
+		self.button =  Button(23)
+		self.button.when_released = self.buttonReleased
+		self.button.when_held = self.buttonHeld
 		
 		with open('/boot/beacon/config.json') as data_file:    
 			self.configData = json.load(data_file)
@@ -70,6 +75,16 @@ class Beacon(object):
 			except RuntimeError:
 				logging.exception("runtime error caught from mqtt client loop")
 				self.reconnect()
+	
+	def buttonHeld(self):
+		self.buttonHoldTime = time.time()
+	
+	def buttonReleased(self):
+		if self.buttonHoldTime is not None:
+			heldTime = time.time() - self.buttonHoldTime + 1
+			self.buttonHoldTime = None
+		else:
+			print "pressed"
 			
 	
 	def message(self, client, feed_id, payload):
@@ -141,7 +156,7 @@ class Beacon(object):
 		logging.info("Connected to Adafruit IO")
 		self.connectState = ConnectState.Connected
 		self.failConnectCount = 0
-		self.client.subscribe(self.configData["feeds"]["receive"]) # or change to whatever name you used	
+		self.client.subscribe(self.configData["feeds"]["receive"]) 	
 				
 	def disconnected(self, client):
 		logging.info('Disconnected from AdafruitIO')
