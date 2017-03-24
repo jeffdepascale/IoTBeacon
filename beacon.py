@@ -3,8 +3,10 @@
 from Adafruit_IO import MQTTClient
 from Adafruit_IO.errors import AdafruitIOError
 import time
+import threading
 from time import sleep
 import gpiozero
+from gpiozero import RGBLED
 from gpiozero import Button
 from pygame import mixer
 import pygame
@@ -15,7 +17,6 @@ import json
 
 logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/beacon.log", filemode="a+",
 								format="%(asctime)-15s %(levelname)-8s %(message)s")
-								
 
 def global_except_hook(exctype, value, traceback):
 	logging.info(value);
@@ -25,7 +26,7 @@ sys.excepthook = global_except_hook
 
 
 class ConnectState:
-    Disconnected, Connecting, Connected, PendingReconnect = range(4)	
+    Disconnected, Connecting, Connected, PendingReconnect = range(4)		
 	
 class Beacon(object):
 
@@ -34,33 +35,43 @@ class Beacon(object):
 	configData = None
 	client = None
 	soundDir = '/boot/beacon/sounds/'
-	greenLED = None
-	redLED = None
-	blueLED = None
+	rgbLED = None
 	button = None
-	buttonHoldTime = None
+	buttonHoldTime = None	
 	
 	def __init__(self):
 		logging.info("Beacon service initialized")
-		
-		self.ledDisplay(0, 1, 0, 1, 1)
-		
-		self.button =  Button(23)
-		self.button.when_released = self.buttonReleased
-		self.button.when_held = self.buttonHeld
 		
 		with open('/boot/beacon/config.json') as data_file:    
 			self.configData = json.load(data_file)
 		#need to account for no json data loaded
 		
+		if(self.configData.get("gpio")):
+			gpioData = self.configData["gpio"]
+			
+			if gpioData.get("button"):
+				self.button = Button(int(gpioData["button"]))
+				self.button.when_released = self.buttonReleased
+				self.button.when_held = self.buttonHeld
+			else:
+				logging.error("config json gpio object missing required button id")
+			
+			if gpioData.get("red_led") and gpioData.get("green_led") and gpioData.get("blue_led"):
+				self.rgbLED = RGBLED(int(gpioData["red_led"]), int(gpioData["green_led"]), int(gpioData["blue_led"]), False, (0,0,0), True)
+			else:
+				logging.error("config json gpio object missing required redled, greenled, and blueled ids")
+				
+		else:
+			logging.error("config json missing require gpio object")
+		
 		if self.configData.get("directories"):
 			dirObj = self.configData["directories"]
 			if dirObj.get("sound"):
 				soundDir = dirObj["sound"]
-				
 		
-		self.client = MQTTClient(self.configData["credentials"]["username"], self.configData["credentials"]["key"])
+		self.ledDisplay(0, 1, 0, 1, 1)
 
+		self.client = MQTTClient(self.configData["credentials"]["username"], self.configData["credentials"]["key"])
 		self.client.on_connect    = self.connected
 		self.client.on_disconnect = self.disconnected
 		self.client.on_message    = self.message	
@@ -84,7 +95,9 @@ class Beacon(object):
 			heldTime = time.time() - self.buttonHoldTime + 1
 			self.buttonHoldTime = None
 		else:
-			print "pressed"
+			if mixer.get_busy():
+				mixer.stop()
+			self.rgbLED._stop_blink() #internal method
 			
 	
 	def message(self, client, feed_id, payload):
@@ -130,28 +143,12 @@ class Beacon(object):
 				mixer.music.set_volume(volume)
 				mixer.music.load(self.soundDir + sound)
 				mixer.music.play()
-			self.ledDisplay(redVal, greenVal, blueVal, blinkCount, blinkRate)
-	
-	def initializeLEDs(self):
-		self.greenLED = gpiozero.PWMOutputDevice(17, False, 0)
-		self.redLED = gpiozero.PWMOutputDevice(18, False, 0)
-		self.blueLED = gpiozero.PWMOutputDevice(27, False, 0)
-	
-	def closeLEDs(self):
-		self.greenLED.close()
-		self.blueLED.close()
-		self.redLED.close()		
+			self.ledDisplay(redVal, greenVal, blueVal, blinkRate, blinkCount)
 				
 	def ledDisplay(self, r, g, b, blinkCount, blinkRate):
-		for i in range(0,blinkCount):
-			self.initializeLEDs()
-			self.redLED.value = r
-			self.blueLED.value = b
-			self.greenLED.value = g
-			sleep(blinkRate)
-			self.closeLEDs()
-			sleep(blinkRate)
-
+		self.rgbLED._stop_blink() #internal method
+		self.rgbLED.pulse(fade_in_time=blinkRate, fade_out_time=blinkRate, on_color=(r, g, b), off_color=(0, 0, 0), n=blinkCount, background=True)
+		
 	def connected(self, client):
 		logging.info("Connected to Adafruit IO")
 		self.connectState = ConnectState.Connected
