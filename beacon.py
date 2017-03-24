@@ -24,6 +24,11 @@ def global_except_hook(exctype, value, traceback):
 				
 sys.excepthook = global_except_hook
 
+testing = False
+args = sys.argv[1:]		
+if "-t" in args:
+	testing = True
+
 
 class ConnectState:
     Disconnected, Connecting, Connected, PendingReconnect = range(4)		
@@ -56,7 +61,7 @@ class Beacon(object):
 			else:
 				logging.error("config json gpio object missing required button id")
 			
-			if gpioData.get("red_led") and gpioData.get("green_led") and gpioData.get("blue_led"):
+			if gpioData.get("red_led") and gpioData.get("green_led") and gpioData.get("blue_led"):				
 				self.rgbLED = RGBLED(int(gpioData["red_led"]), int(gpioData["green_led"]), int(gpioData["blue_led"]), False, (0,0,0), True)
 			else:
 				logging.error("config json gpio object missing required redled, greenled, and blueled ids")
@@ -105,7 +110,7 @@ class Beacon(object):
 		log_data = ""
 		with open('/home/pi/share/beacon.log', 'r') as myfile:
 			log_data=myfile.read().replace('\n', '')
-		if log_data.find(msgStr) == -1:
+		if log_data.find(msgStr) == -1 or testing:
 			logging.info(msgStr)
 			messageData = None
 			try:
@@ -143,7 +148,7 @@ class Beacon(object):
 				mixer.music.set_volume(volume)
 				mixer.music.load(self.soundDir + sound)
 				mixer.music.play()
-			self.ledDisplay(redVal, greenVal, blueVal, blinkRate, blinkCount)
+			self.ledDisplay(redVal, greenVal, blueVal, blinkCount, blinkRate)
 				
 	def ledDisplay(self, r, g, b, blinkCount, blinkRate):
 		self.rgbLED._stop_blink() #internal method
