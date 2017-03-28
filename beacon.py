@@ -31,7 +31,24 @@ if "-t" in args:
 
 
 class ConnectState:
-    Disconnected, Connecting, Connected, PendingReconnect = range(4)		
+    Disconnected, Connecting, Connected, PendingReconnect = range(4)
+
+class LedDisplayRule(object):
+	
+	r = g = b = 0
+	blinkCount = blinkRate= 1
+	pulse = False
+	persistent = False
+	
+	def __init__(self, _r, _g, _b, _blinkCount, _blinkRate, _pulse= False, _persistent = False):
+		self.r = _r
+		self.g = _g
+		self.b = _b
+		self.blinkCount = _blinkCount
+		self.blinkRate = _blinkRate
+		self.pulse = _pulse
+		self.persistent = _persistent
+	
 	
 class Beacon(object):
 
@@ -43,6 +60,7 @@ class Beacon(object):
 	rgbLED = None
 	button = None
 	buttonHoldTime = None	
+	persistentLedRule = None
 	
 	def __init__(self):
 		logging.info("Beacon service initialized")
@@ -74,7 +92,8 @@ class Beacon(object):
 			if dirObj.get("sound"):
 				soundDir = dirObj["sound"]
 		
-		self.ledDisplay(0, 1, 0, 1, 1)
+		self.ledDisplay(LedDisplayRule(0, 1, 0, 1, 1))
+		sleep(1)
 
 		self.client = MQTTClient(self.configData["credentials"]["username"], self.configData["credentials"]["key"])
 		self.client.on_connect    = self.connected
@@ -91,7 +110,7 @@ class Beacon(object):
 			except RuntimeError:
 				logging.exception("runtime error caught from mqtt client loop")
 				self.reconnect()
-	
+			
 	def buttonHeld(self):
 		self.buttonHoldTime = time.time()
 	
@@ -101,8 +120,9 @@ class Beacon(object):
 			self.buttonHoldTime = None
 		else:
 			mixer.music.stop()
-			self.rgbLED._stop_blink() #internal method
-			self.rgbLED.off()
+			mixer.quit()
+			self.stopLED()
+			self.persistentLedRule = None
 			
 	
 	def message(self, client, feed_id, payload):
@@ -124,12 +144,15 @@ class Beacon(object):
 			blueVal = 0
 			blinkCount = 1
 			blinkRate = 1
+			persistent = False
 			pulse = False
 			if self.configData.get("sounds"):
 				sound = self.configData["sounds"]["default"]
 			if messageData is not None:
 				if messageData.get("sound"):
 					sound = self.configData["sounds"][messageData["sound"]]
+				if messageData.get("persistent") and str(messageData["persistent"]).lower() == "true":
+					persistent = True
 				if messageData.get("volume") is not None:
 					volume = float(messageData.get("volume"))
 				if messageData.get("blinkCount") is not None:
@@ -141,9 +164,9 @@ class Beacon(object):
 				if messageData.get("color") is not None:
 					try:
 						colorArr = str(messageData.get("color")).split("/")
-						redVal = int(colorArr[0])
-						greenVal = int(colorArr[1])
-						blueVal = int(colorArr[2])
+						redVal = float(colorArr[0])
+						greenVal = float(colorArr[1])
+						blueVal = float(colorArr[2])
 					except:
 						pass
 						
@@ -152,16 +175,22 @@ class Beacon(object):
 				mixer.music.set_volume(volume)
 				mixer.music.load(self.soundDir + sound)
 				mixer.music.play()
-			self.ledDisplay(redVal, greenVal, blueVal, blinkCount, blinkRate, pulse)
-				
-	def ledDisplay(self, r, g, b, blinkCount, blinkRate, pulse=False):
-		print blinkRate
-		print blinkCount
-		self.rgbLED._stop_blink() #internal method
-		if(pulse):
-			self.rgbLED.pulse(fade_in_time=blinkRate, fade_out_time=blinkRate, on_color=(r, g, b), off_color=(0, 0, 0), n=blinkCount, background=True)
+			self.ledDisplay(LedDisplayRule(redVal, greenVal, blueVal, blinkCount, blinkRate, pulse, persistent))
+	
+	def stopLED(self):
+		self.rgbLED._stop_blink()
+		self.rgbLED.off()
+	
+	def ledDisplay(self, rule):
+		self.stopLED()
+		blinkCount = rule.blinkCount
+		if(rule.persistent):
+			blinkCount=None
+			self.persistentLedRule = rule
+		if(rule.pulse):
+			self.rgbLED.pulse(fade_in_time=rule.blinkRate, fade_out_time=rule.blinkRate, on_color=(rule.r, rule.g, rule.b), off_color=(0, 0, 0), n=blinkCount, background=True)
 		else:
-			self.rgbLED.blink(on_time=blinkRate, off_time=blinkRate, fade_in_time=0, fade_out_time=0, on_color=(r, g, b), off_color=(0, 0, 0), n=blinkCount, background=True)
+			self.rgbLED.blink(on_time=rule.blinkRate, off_time=rule.blinkRate, fade_in_time=0, fade_out_time=0, on_color=(rule.r, rule.g, rule.b), off_color=(0, 0, 0), n=blinkCount, background=True)
 		
 	def connected(self, client):
 		logging.info("Connected to Adafruit IO")
