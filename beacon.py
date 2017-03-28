@@ -9,7 +9,6 @@ import gpiozero
 from gpiozero import RGBLED
 from gpiozero import Button
 from pygame import mixer
-import pygame
 import logging
 import sys
 import string
@@ -28,6 +27,7 @@ testing = False
 args = sys.argv[1:]		
 if "-t" in args:
 	testing = True
+	logging.info("test mode")
 
 
 class ConnectState:
@@ -100,9 +100,9 @@ class Beacon(object):
 			heldTime = time.time() - self.buttonHoldTime + 1
 			self.buttonHoldTime = None
 		else:
-			if mixer.get_busy():
-				mixer.stop()
+			mixer.music.stop()
 			self.rgbLED._stop_blink() #internal method
+			self.rgbLED.off()
 			
 	
 	def message(self, client, feed_id, payload):
@@ -123,7 +123,8 @@ class Beacon(object):
 			greenVal = 1
 			blueVal = 0
 			blinkCount = 1
-			blinkRate = 5
+			blinkRate = 1
+			pulse = False
 			if self.configData.get("sounds"):
 				sound = self.configData["sounds"]["default"]
 			if messageData is not None:
@@ -135,6 +136,8 @@ class Beacon(object):
 					blinkCount = int(messageData.get("blinkCount"))
 				if messageData.get("blinkRate") is not None:
 					blinkRate = float(messageData.get("blinkRate"))		
+				if messageData.get("pulse") is not None and str(messageData["pulse"]).lower() == "true":
+					pulse = True
 				if messageData.get("color") is not None:
 					try:
 						colorArr = str(messageData.get("color")).split("/")
@@ -143,16 +146,22 @@ class Beacon(object):
 						blueVal = int(colorArr[2])
 					except:
 						pass
+						
 			if sound is not None:
-				mixer.init()			
+				mixer.init()
 				mixer.music.set_volume(volume)
 				mixer.music.load(self.soundDir + sound)
 				mixer.music.play()
-			self.ledDisplay(redVal, greenVal, blueVal, blinkCount, blinkRate)
+			self.ledDisplay(redVal, greenVal, blueVal, blinkCount, blinkRate, pulse)
 				
-	def ledDisplay(self, r, g, b, blinkCount, blinkRate):
+	def ledDisplay(self, r, g, b, blinkCount, blinkRate, pulse=False):
+		print blinkRate
+		print blinkCount
 		self.rgbLED._stop_blink() #internal method
-		self.rgbLED.pulse(fade_in_time=blinkRate, fade_out_time=blinkRate, on_color=(r, g, b), off_color=(0, 0, 0), n=blinkCount, background=True)
+		if(pulse):
+			self.rgbLED.pulse(fade_in_time=blinkRate, fade_out_time=blinkRate, on_color=(r, g, b), off_color=(0, 0, 0), n=blinkCount, background=True)
+		else:
+			self.rgbLED.blink(on_time=blinkRate, off_time=blinkRate, fade_in_time=0, fade_out_time=0, on_color=(r, g, b), off_color=(0, 0, 0), n=blinkCount, background=True)
 		
 	def connected(self, client):
 		logging.info("Connected to Adafruit IO")
