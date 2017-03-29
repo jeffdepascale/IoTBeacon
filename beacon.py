@@ -10,11 +10,15 @@ from gpiozero import RGBLED
 from gpiozero import Button
 from pygame import mixer
 import logging
+import os
 import sys
 import string
 import json
 
-logging.basicConfig(level=logging.DEBUG, filename="/home/pi/share/beacon.log", filemode="a+",
+launchDir = os.path.dirname(os.path.abspath(__file__))
+logFilePath = os.path.join(launchDir, 'beacon.log')
+
+logging.basicConfig(level=logging.DEBUG, filename=logFilePath, filemode="a+",
 								format="%(asctime)-15s %(levelname)-8s %(message)s")
 
 def global_except_hook(exctype, value, traceback):
@@ -56,7 +60,7 @@ class Beacon(object):
 	failConnectCount = 0
 	configData = None
 	client = None
-	soundDir = '/boot/beacon/sounds/'
+	soundDir = os.path.join(launchDir, 'sounds/')
 	rgbLED = None
 	button = None
 	buttonHoldTime = None	
@@ -65,7 +69,7 @@ class Beacon(object):
 	def __init__(self):
 		logging.info("Beacon service initialized")
 		
-		with open('/boot/beacon/config.json') as data_file:    
+		with open(os.path.join(launchDir, 'beacon.json')) as data_file:    
 			self.configData = json.load(data_file)
 		#need to account for no json data loaded
 		
@@ -128,7 +132,7 @@ class Beacon(object):
 	def message(self, client, feed_id, payload):
 		msgStr = 'Feed {0} received new value: {1}'.format(feed_id, payload)
 		log_data = ""
-		with open('/home/pi/share/beacon.log', 'r') as myfile:
+		with open(logFilePath, 'r') as myfile:
 			log_data=myfile.read().replace('\n', '')
 		if log_data.find(msgStr) == -1 or testing:
 			logging.info(msgStr)
