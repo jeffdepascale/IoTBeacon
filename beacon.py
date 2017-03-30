@@ -59,6 +59,7 @@ class Beacon(object):
 	connectState = ConnectState.Disconnected
 	failConnectCount = 0
 	configData = None
+	commandsData = None
 	client = None
 	soundDir = os.path.join(launchDir, 'sounds/')
 	rgbLED = None
@@ -96,6 +97,9 @@ class Beacon(object):
 			if dirObj.get("sound"):
 				soundDir = dirObj["sound"]
 		
+		if self.configData.get("commands"):
+			self.commandsData = self.configData["commands"]
+		
 		self.ledDisplay(LedDisplayRule(0, 1, 0, 1, 1))
 		sleep(1)
 
@@ -122,11 +126,22 @@ class Beacon(object):
 		if self.buttonHoldTime is not None:
 			heldTime = time.time() - self.buttonHoldTime + 1
 			self.buttonHoldTime = None
+			print heldTime
+			if heldTime > 5:
+				self.ledDisplay(LedDisplayRule(1, 0, 0, 3, .5))
+				sleep(2)
+				self.stopLED()
+				os.system('sudo shutdown -r now')
 		else:
-			mixer.music.stop()
-			mixer.quit()
 			self.stopLED()
 			self.persistentLedRule = None
+			print self.commandsData
+			if mixer.get_init() and mixer.music.get_busy():
+				mixer.music.stop()
+				mixer.quit()
+			elif self.commandsData is not None:
+				self.client.publish(self.configData["feeds"]["outbound"], self.commandsData[0])
+			
 			
 	
 	def message(self, client, feed_id, payload):
@@ -200,7 +215,7 @@ class Beacon(object):
 		logging.info("Connected to Adafruit IO")
 		self.connectState = ConnectState.Connected
 		self.failConnectCount = 0
-		self.client.subscribe(self.configData["feeds"]["receive"]) 	
+		self.client.subscribe(self.configData["feeds"]["inbound"]) 	
 				
 	def disconnected(self, client):
 		logging.info('Disconnected from AdafruitIO')
