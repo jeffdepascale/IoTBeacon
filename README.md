@@ -36,6 +36,8 @@ The json file has a mix of require dand optional values:
 
 + adafruit_io - This object must contain two sub objects: credentials - This object must contain the elements "key" and "username". feeds - this object must contain the elements "inbound" and "outbound". Inbound defines the feed that the unit will listen on, outbound is the feed it will report triggers to. 
 
++ sounds - requires at least one element named default, with the name of an mp3 or wav file in the sounds directory. Other elements can be added with other names that can be used to trigger different sounds for events. See message syntax below. 
+
 ### Optional
 
 + directories - This object currently supports only the element "sound". 
@@ -75,6 +77,8 @@ The json file has a mix of require dand optional values:
 ```
 # Adafruit IO Steup
 
+Signup at io.adafruit.com and setup two feeds - one for inbound, one for outbound. the names of the feeds, your username, and your key all go into the config file. The key can be found under settings -> manage AIO keys.
+
 # IFTTT Setup
 
 To trigger actions in IFTTT from button presses on the device, configure an applet to listen to AdafruitIO on your outbound feed. To trigger actions to your device from IFTTT, configure an applet to send a message to AdafruitIO on your inbound channel. 
@@ -83,16 +87,15 @@ For a trigger, configure the value to be equal to the string defined in the comm
 
 Message json syntax for inbound is below.
 
-### Message JSON Options 
+## Message JSON Options 
 
+### Required
 
+### Optional
 
 # Button Hold Triggers
 
 Holding the button for more than 5 seconds will trigger the unit to restart. 
-
-# Sounds
-
 
 # Logging
 
