@@ -91,10 +91,10 @@ Message json syntax for inbound is below.
 
 ### Required
 
-+ type - not used by the app, but important for logging, to differentiate sources and unique the requests.
 + timestamp - needed to uniquely identify the request. Look at the available ingredients for the IFTTT integration if triggering from there, the name may vary based on the integration.
 
 ### Optional
++ type - not used by the app, but helpful in reviewing the logs, to differentiate sources and uniquely identify the requests.
 + sound - the name of the sound to be played - this is the key name from the key value pair in the sounds object from the config file. 
 + persistent - adding this element and setting it to "true" will continue to blink the LED until the button is pressed to stop it. Defaults to false.
 + volume  - optionally set a volume level. This is relative to the system volume (which can be set via [alsamixer](http://blog.scphillips.com/posts/2013/01/sound-configuration-on-raspberry-pi-with-alsa/), a float value between 0 and 1. 
@@ -102,6 +102,34 @@ Message json syntax for inbound is below.
 + blinkcount - integer value of how many times to blink the LED. Defaults to 1. 
 + pulse - adding this element and setting it to "true" will make the LED fade in/out instead of a binary on/off blink. Defaults to false. 
 + color - 3 float values between 0 and 1, with forward slashes delimiting, for red, green, and blue, respectively. So for example, 1/0/0 would be solid red. 1/0/1 would be purple. Note that LED's do vary in the intensity values. Commonly for example red will run higher intensity, so purple may be better defined as .3/0/1,trial and error will get the color you are looking for. Defaults to 0/1/0 - green.
+
+### Example Message JSON
+
+Here is an example for a nest cam trigger, using their ingredient for the timestamp called "StartedAt". This is set to purple and persistent, and plays the notification sound. 
+
+```json
+{  
+   "type":"nest cam motion",
+   "timestamp":"{{StartedAt}}",
+   "blinkRate":".2",
+   "blinkCount":"5",
+   "color":".3/0/1",
+   "sound":"notification",
+   "persistent":"true"
+}
+```
+
+Another example of a generic trigger, this one uses the button widget so references the relevant ingredient "OccurredAt" for timestamp. Blinks green 5 times witha .2 second delay, this will play the default sound, if defined in the config file:
+
+```json
+{  
+   "timestamp":" {{OccurredAt}}",
+   "blinkRate":".2",
+   "blinkCount":"5",
+   "color":"0/0/1"
+}
+```
+
 
 # Button Hold Triggers
 
