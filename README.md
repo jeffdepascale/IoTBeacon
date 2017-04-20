@@ -36,9 +36,9 @@ The json file has a mix of require dand optional values:
 
 + adafruit_io - This object must contain two sub objects: credentials - This object must contain the elements "key" and "username". feeds - this object must contain the elements "inbound" and "outbound". Inbound defines the feed that the unit will listen on, outbound is the feed it will report triggers to. 
 
-+ sounds - requires at least one element named default, with the name of an mp3 or wav file in the sounds directory. Other elements can be added with other names that can be used to trigger different sounds for events. See message syntax below. 
-
 ### Optional
+
++ sounds - if present, requires at least one element named default, with the name of an mp3 or wav file in the sounds directory. Other elements can be added with other names that can be used to trigger different sounds for events. See message syntax below. 
 
 + directories - This object currently supports only the element "sound". 
 
@@ -91,7 +91,17 @@ Message json syntax for inbound is below.
 
 ### Required
 
++ type - not used by the app, but important for logging, to differentiate sources and unique the requests.
++ timestamp - needed to uniquely identify the request. Look at the available ingredients for the IFTTT integration if triggering from there, the name may vary based on the integration.
+
 ### Optional
++ sound
++ persistent
++ volume
++ blinkrate
++ blinkcount
++ pulse
++ color
 
 # Button Hold Triggers
 
