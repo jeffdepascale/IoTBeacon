@@ -30,19 +30,19 @@ For running on startup automatically, this can be set up as a service following 
 
 The json file has a mix of require dand optional values:
 
-## Required
+### Required
 
 + gpiodata - This object must contain the following four elements, with a value of the corresponding GPIO pin number: red_led, blue_led, green_led, button.
 
 + adafruit_io - This object must contain two sub objects: credentials - This object must contain the elements "key" and "username". feeds - this object must contain the elements "inbound" and "outbound"
 
-## Optional
+### Optional
 
 + directories - This object currently supports only the element "sound". 
 
 + commands - An array of text strings that can be triggered from button presses.
 
-## example json
+### example json
 
 ```json
 {
@@ -73,6 +73,14 @@ The json file has a mix of require dand optional values:
 	}
 }
 ```
+# Logging
+
+A file named beacon.log will be created in the same directory as beacon.py
+
+# Launch Flags
+
+1. -t - testing mode. Launching with this flag currently allows for the following:
+	+ Adafruit IO currently always resends the last event for a feed when subscribing. IoTBeacon tracks this and does not replay an event that has previously come through. The testing flag will bypass this, which is useful for testing as an event will always trigger on launch.
 
 # Current Limitations
 
