@@ -2,7 +2,7 @@
 IoT beacon notification receiver and trigger built on AdaFruit IO and IFTTT
 
 # Hardware
-A walkthrough of an example hardware device for this software can be found at instructables.com
+A walkthrough of an example hardware device for this software can be found at https://www.instructables.com/id/IoT-Beacon-Notification-Receiver-and-Trigger
 
 # OS Setup
 
