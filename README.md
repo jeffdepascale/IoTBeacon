@@ -34,7 +34,7 @@ The json file has a mix of require dand optional values:
 
 + gpiodata - This object must contain the following four elements, with a value of the corresponding GPIO pin number: red_led, blue_led, green_led, button.
 
-+ adafruit_io - This object must contain two sub objects: credentials - This object must contain the elements "key" and "username". feeds - this object must contain the elements "inbound" and "outbound"
++ adafruit_io - This object must contain two sub objects: credentials - This object must contain the elements "key" and "username". feeds - this object must contain the elements "inbound" and "outbound". Inbound defines the feed that the unit will listen on, outbound is the feed it will report triggers to. 
 
 ### Optional
 
@@ -73,6 +73,27 @@ The json file has a mix of require dand optional values:
 	}
 }
 ```
+# Adafruit IO Steup
+
+# IFTTT Setup
+
+To trigger actions in IFTTT from button presses on the device, configure an applet to listen to AdafruitIO on your outbound feed. To trigger actions to your device from IFTTT, configure an applet to send a message to AdafruitIO on your inbound channel. 
+
+For a trigger, configure the value to be equal to the string defined in the commands array in the config JSON.
+
+Message json syntax for inbound is below.
+
+### Message JSON Options 
+
+
+
+# Button Hold Triggers
+
+Holding the button for more than 5 seconds will trigger the unit to restart. 
+
+# Sounds
+
+
 # Logging
 
 A file named beacon.log will be created in the same directory as beacon.py
