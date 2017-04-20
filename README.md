@@ -2,7 +2,7 @@
 IoT beacon notification receiver and trigger built on AdaFruit IO and IFTTT
 
 # Hardware
-A walkthrough of an exampke hardware device for this software can be found at instructables.com
+A walkthrough of an example hardware device for this software can be found at instructables.com
 
 # OS Setup
 
@@ -95,13 +95,13 @@ Message json syntax for inbound is below.
 + timestamp - needed to uniquely identify the request. Look at the available ingredients for the IFTTT integration if triggering from there, the name may vary based on the integration.
 
 ### Optional
-+ sound
-+ persistent
-+ volume
-+ blinkrate
-+ blinkcount
-+ pulse
-+ color
++ sound - the name of the sound to be played - this is the key name from the key value pair in the sounds object from the config file. 
++ persistent - adding this element and setting it to "true" will continue to blink the LED until the button is pressed to stop it. Defaults to false.
++ volume  - optionally set a volume level. This is relative to the system volume (which can be set via [alsamixer](http://blog.scphillips.com/posts/2013/01/sound-configuration-on-raspberry-pi-with-alsa/), a float value between 0 and 1. 
++ blinkrate - rate of LED blink in seconds, float value. Defaults to 1. 
++ blinkcount - integer value of how many times to blink the LED. Defaults to 1. 
++ pulse - adding this element and setting it to "true" will make the LED fade in/out instead of a binary on/off blink. Defaults to false. 
++ color - 3 float values between 0 and 1, with forward slashes delimiting, for red, green, and blue, respectively. So for example, 1/0/0 would be solid red. 1/0/1 would be purple. Note that LED's do vary in the intensity values. Commonly for example red will run higher intensity, so purple may be better defined as .3/0/1,trial and error will get the color you are looking for. Defaults to 0/1/0 - green.
 
 # Button Hold Triggers
 
